@@ -57,6 +57,7 @@ typedef enum __attribute__ ((__packed__)) terrain_type {
   ter_gate,
 } terrain_type_t;
 
+
 typedef struct pc{
   int8_t x,y;
 }pc_t;
@@ -953,7 +954,171 @@ void delete_world()
   }
 }
 
+/*
+static void dijkstra_trainer(map_t *m, pair_t from, pair_t to)
+{
+  static path_t path[MAP_Y][MAP_X], *p;
+  static uint32_t initialized = 0;
+  heap_t h;
+  uint32_t x, y;
 
+  if (!initialized) {
+    for (y = 0; y < MAP_Y; y++) {
+      for (x = 0; x < MAP_X; x++) {
+        path[y][x].pos[dim_y] = y;
+        path[y][x].pos[dim_x] = x;
+      }
+    }
+    initialized = 1;
+  }
+  
+  for (y = 0; y < MAP_Y; y++) {
+    for (x = 0; x < MAP_X; x++) {
+      path[y][x].cost = INT_MAX;
+    }
+  }
+
+  path[from[dim_y]][from[dim_x]].cost = 0;
+
+  heap_init(&h, path_cmp, NULL);
+
+  for (y = 1; y < MAP_Y - 1; y++) {
+    for (x = 1; x < MAP_X - 1; x++) {
+      path[y][x].hn = heap_insert(&h, &path[y][x]);
+    }
+  }
+
+  while ((p = heap_remove_min(&h))) {
+    p->hn = NULL;
+
+    if ((p->pos[dim_y] == to[dim_y]) && p->pos[dim_x] == to[dim_x]) {
+      for (x = to[dim_x], y = to[dim_y];
+           (x != from[dim_x]) || (y != from[dim_y]);
+           p = &path[y][x], x = p->from[dim_x], y = p->from[dim_y]) {
+        // Don't overwrite the gate
+        if (x != to[dim_x] || y != to[dim_y]) {
+          mapxy(x, y) = ter_path;
+          heightxy(x, y) = 0;
+        }
+      }
+      heap_delete(&h);
+      return;
+    }
+
+    if ((path[p->pos[dim_y] - 1][p->pos[dim_x]    ].hn) &&
+        (path[p->pos[dim_y] - 1][p->pos[dim_x]    ].cost >
+         ((p->cost + heightpair(p->pos)) *
+          edge_penalty(p->pos[dim_x], p->pos[dim_y] - 1)))) {
+      path[p->pos[dim_y] - 1][p->pos[dim_x]    ].cost =
+        ((p->cost + heightpair(p->pos)) *
+         edge_penalty(p->pos[dim_x], p->pos[dim_y] - 1));
+      path[p->pos[dim_y] - 1][p->pos[dim_x]    ].from[dim_y] = p->pos[dim_y];
+      path[p->pos[dim_y] - 1][p->pos[dim_x]    ].from[dim_x] = p->pos[dim_x];
+      heap_decrease_key_no_replace(&h, path[p->pos[dim_y] - 1]
+                                           [p->pos[dim_x]    ].hn);
+    }
+    if ((path[p->pos[dim_y]    ][p->pos[dim_x] - 1].hn) &&
+        (path[p->pos[dim_y]    ][p->pos[dim_x] - 1].cost >
+         ((p->cost + heightpair(p->pos)) *
+          edge_penalty(p->pos[dim_x] - 1, p->pos[dim_y])))) {
+      path[p->pos[dim_y]][p->pos[dim_x] - 1].cost =
+        ((p->cost + heightpair(p->pos)) *
+         edge_penalty(p->pos[dim_x] - 1, p->pos[dim_y]));
+      path[p->pos[dim_y]    ][p->pos[dim_x] - 1].from[dim_y] = p->pos[dim_y];
+      path[p->pos[dim_y]    ][p->pos[dim_x] - 1].from[dim_x] = p->pos[dim_x];
+      heap_decrease_key_no_replace(&h, path[p->pos[dim_y]    ]
+                                           [p->pos[dim_x] - 1].hn);
+    }
+    if ((path[p->pos[dim_y]    ][p->pos[dim_x] + 1].hn) &&
+        (path[p->pos[dim_y]    ][p->pos[dim_x] + 1].cost >
+         ((p->cost + heightpair(p->pos)) *
+          edge_penalty(p->pos[dim_x] + 1, p->pos[dim_y])))) {
+      path[p->pos[dim_y]][p->pos[dim_x] + 1].cost =
+        ((p->cost + heightpair(p->pos)) *
+         edge_penalty(p->pos[dim_x] + 1, p->pos[dim_y]));
+      path[p->pos[dim_y]    ][p->pos[dim_x] + 1].from[dim_y] = p->pos[dim_y];
+      path[p->pos[dim_y]    ][p->pos[dim_x] + 1].from[dim_x] = p->pos[dim_x];
+      heap_decrease_key_no_replace(&h, path[p->pos[dim_y]    ]
+                                           [p->pos[dim_x] + 1].hn);
+    }
+    if ((path[p->pos[dim_y] + 1][p->pos[dim_x]    ].hn) &&
+        (path[p->pos[dim_y] + 1][p->pos[dim_x]    ].cost >
+         ((p->cost + heightpair(p->pos)) *
+          edge_penalty(p->pos[dim_x], p->pos[dim_y] + 1)))) {
+      path[p->pos[dim_y] + 1][p->pos[dim_x]    ].cost =
+        ((p->cost + heightpair(p->pos)) *
+         edge_penalty(p->pos[dim_x], p->pos[dim_y] + 1));
+      path[p->pos[dim_y] + 1][p->pos[dim_x]    ].from[dim_y] = p->pos[dim_y];
+      path[p->pos[dim_y] + 1][p->pos[dim_x]    ].from[dim_x] = p->pos[dim_x];
+      heap_decrease_key_no_replace(&h, path[p->pos[dim_y] + 1]
+                                           [p->pos[dim_x]    ].hn);
+    }
+  }
+}
+*/
+
+typedef struct trainer_costs{
+  int8_t boulder;
+  int8_t tree;
+  int8_t path;
+  int8_t pMart;
+  int8_t pCntr;
+  int8_t tGrass;
+  int8_t sGrass;
+  int8_t mountain;
+  int8_t forest;
+  int8_t water;
+  int8_t gate;
+} trainer_costs_t;
+
+
+typedef enum trainer_type{
+  tr_hiker,
+  tr_rival
+}trainer_type_t;
+
+typedef struct trainer{
+
+ trainer_type_t type;
+ trainer_costs_t costs;
+
+}trainer_t;
+
+void set_trainer_costs(trainer_t *t, int8_t boulder,
+  int8_t tree, int8_t path, int8_t pMart, int8_t pCntr, int8_t tGrass,
+  int8_t sGrass, int8_t mountain, int8_t forest, int8_t water, int8_t gate){
+      
+      t->costs.boulder = boulder;
+      t->costs.tree = tree;
+      t->costs.path = path;
+      t->costs.pMart = pMart;
+      t->costs.pCntr = pCntr;
+      t->costs.tGrass = tGrass;
+      t->costs.sGrass = sGrass;
+      t->costs.mountain = mountain;
+      t->costs.forest = forest;
+      t->costs.water = water;
+      t->costs.gate = gate;
+}
+
+void trainer_init(trainer_t *trainer, trainer_type_t type){
+  trainer->type = type;
+  if (type == tr_hiker){
+    set_trainer_costs(trainer, -1, -1, 10, 50, 50, 15, 10, 15, 15, -1, -1);
+  }else{
+    set_trainer_costs(trainer, -1, -1, 10, 50, 50, 20, 10, -1, -1, -1, -1);
+  }
+
+}
+
+void calc_trainer_path(){
+  trainer_t hiker;
+  trainer_init(&hiker, tr_hiker);
+  trainer_t rival; 
+  trainer_init(&rival, tr_rival);
+
+  //printf("Hiker mountain cost: %d, Rival Tree cost: %d", hiker.costs.mountain, rival.costs.path);
+}
 
 int main(int argc, char *argv[])
 {
@@ -976,6 +1141,7 @@ int main(int argc, char *argv[])
 
   do {
     print_map();  
+    //calc_trainer_path();
     printf("Current position is %d%cx%d%c (%d,%d).  "
            "Enter command: ",
            abs(world.cur_idx[dim_x] - (WORLD_SIZE / 2)),
