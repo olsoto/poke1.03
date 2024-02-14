@@ -1045,9 +1045,9 @@ int get_trainer_costs(trainer_t *t, terrain_type_t terrain){
 void trainer_init(trainer_t *trainer, trainer_type_t type){
   trainer->type = type;
   if (type == tr_hiker){
-    set_trainer_costs(trainer, 20, 20, 10, 50, 50, 15, 10, 15, 15, 20, 20);
+    set_trainer_costs(trainer, INT_MAX, INT_MAX, 10, 50, 50, 15, 10, 15, 15, INT_MAX, INT_MAX);
   }else{
-    set_trainer_costs(trainer, 20, 20, 10, 50, 50, 20, 10, 20, 20, 20, 20);
+    set_trainer_costs(trainer, INT_MAX, INT_MAX, 10, 50, 50, 20, 10, INT_MAX, INT_MAX, INT_MAX, INT_MAX);
   }
 }
 
@@ -1169,11 +1169,11 @@ static int dijkstra_trainer(map_t *m, pair_t from, pair_t to, trainer_t *trainer
 void print_trainer_map(trainer_t *t, int trainerMap[MAP_Y][MAP_X] ){
   for(int y = 1; y < MAP_Y - 1; y++){
     for (int x = 1; x < MAP_X - 1; x++){
-      /*if (t->trainerMap[y][x]< 0){
+      if (trainerMap[y][x] < 0 ){
         printf("   ");
-      }else{*/
-      printf("%d ", trainerMap[y][x] );
-      //}
+      }else{
+        printf("%02d ", trainerMap[y][x] % 100);
+      }
     }
     printf("\n");
   }
@@ -1186,7 +1186,7 @@ void calc_trainer_path(map_t *m){
   trainer_t rival; 
   trainer_init(&rival, tr_rival);
   int hikerMap[MAP_Y][MAP_X] = {0};
-  //int rivalMap[MAP_Y][MAP_X] = {0};
+  int rivalMap[MAP_Y][MAP_X] = {0};
 
   
   pair_t pcLoc;
@@ -1194,25 +1194,37 @@ void calc_trainer_path(map_t *m){
   pcLoc[dim_y] = m->pc.y;
   for (int y = 1; y < MAP_Y-1; y++){
     for (int x = 1; x < MAP_X-1; x++){
+      if (get_trainer_costs(&hiker, m->map[y][x]) == INT_MAX){
+        hikerMap[y][x] = -1;
+        continue;
+      }
       pair_t currLoc;
       currLoc[dim_x] = x; 
       currLoc[dim_y] = y; 
       hikerMap[y][x] = dijkstra_trainer(m, currLoc, pcLoc, &hiker);
     }
   }
-/*
+
   for (int y = 1; y < MAP_Y-1; y++){
     for (int x = 1; x < MAP_X-1; x++){
+      if (get_trainer_costs(&rival, m->map[y][x]) == INT_MAX){
+        rivalMap[y][x] = -1;
+        continue;
+      }
       pair_t currLoc;
       currLoc[dim_x] = x; 
       currLoc[dim_y] = y; 
       rivalMap[y][x] = dijkstra_trainer(m, currLoc, pcLoc, &rival);
     }
   }
+
   print_trainer_map(&rival, rivalMap);
-*/
+  printf("Rival map above: \n");
+
 
   print_trainer_map(&hiker, hikerMap);
+  printf("Hiker map above: \n");
+  printf("\n");
 
 
 }
