@@ -29,11 +29,11 @@ $(BIN): $(OBJS)
 	@$(ECHO) Compiling $<
 	@$(CXX) $(CXXFLAGS) -MMD -MF $*.d -c $<
 
-.PHONY: all clean clobber etags
+.PHONY: all clean clobber etags clean_exe
 
-clean:
+clean: clean_exe
 	@$(ECHO) Removing all generated files
-	@$(RM) *.o $(BIN) *.d TAGS core vgcore.* gmon.out
+	@$(RM) *.o *.d TAGS core vgcore.* gmon.out
 
 clobber: clean
 	@$(ECHO) Removing backup files
@@ -42,3 +42,7 @@ clobber: clean
 etags:
 	@$(ECHO) Updating TAGS
 	@etags *.[ch]
+
+clean_exe:
+	@$(ECHO) Removing poke327.exe
+	@if [ -f poke327.exe ]; then rm poke327.exe; fi

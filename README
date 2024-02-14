@@ -1,0 +1,5 @@
+Author olsoto (Thomas Olson)
+Used scheaffer's path finding dijkstra with fibunacci heap and modified it to work for trainers, using a get_trainer_cost
+method as the Graph.edges(u,v) with implementation of trainer structs and initialization to create the maps.
+
+Should work and print a near-exact map as the example one posted on Piazza.
