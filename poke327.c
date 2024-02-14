@@ -93,6 +93,7 @@ static int32_t edge_penalty(int8_t x, int8_t y)
   return (x == 1 || y == 1 || x == MAP_X - 2 || y == MAP_Y - 2) ? 2 : 1;
 }
 
+
 static void dijkstra_path(map_t *m, pair_t from, pair_t to)
 {
   static path_t path[MAP_Y][MAP_X], *p;
@@ -954,15 +955,111 @@ void delete_world()
   }
 }
 
-/*
-static void dijkstra_trainer(map_t *m, pair_t from, pair_t to)
-{
+typedef struct trainer_costs{
+  int boulder;
+  int tree;
+  int path;
+  int pMart;
+  int pCntr;
+  int tGrass;
+  int sGrass;
+  int mountain;
+  int forest;
+  int water;
+  int gate;
+} trainer_costs_t;
+
+
+typedef enum trainer_type{
+  tr_hiker,
+  tr_rival
+}trainer_type_t;
+
+typedef struct trainer{
+
+ trainer_type_t type;
+ trainer_costs_t costs;
+ int trainerMap[MAP_Y][MAP_X];
+
+}trainer_t;
+
+void set_trainer_costs(trainer_t *t, int boulder,
+  int tree, int path, int pMart, int pCntr, int tGrass,
+  int sGrass, int mountain, int forest, int water, int gate){
+      
+      t->costs.boulder = boulder;
+      t->costs.tree = tree;
+      t->costs.path = path;
+      t->costs.pMart = pMart;
+      t->costs.pCntr = pCntr;
+      t->costs.tGrass = tGrass;
+      t->costs.sGrass = sGrass;
+      t->costs.mountain = mountain;
+      t->costs.forest = forest;
+      t->costs.water = water;
+      t->costs.gate = gate;
+}
+
+int get_trainer_costs(trainer_t *t, terrain_type_t terrain){
+  switch (terrain){
+    case (ter_debug):
+      return -1;
+      break;
+    case (ter_boulder):
+      return t->costs.boulder;
+      break;
+    case (ter_tree):
+      return t->costs.tree;
+      break;
+    case(ter_path):
+      return t->costs.path;
+      break;
+    case(ter_mart):
+      return t->costs.pMart;
+      break;
+    case(ter_center):
+      return t->costs.pCntr;
+      break;
+    case(ter_grass):
+      return t->costs.tGrass;
+      break;
+    case(ter_clearing):
+      return t->costs.sGrass;
+      break;
+    case(ter_mountain):
+      return t->costs.mountain;
+      break;
+    case(ter_forest):
+      return t->costs.forest;
+      break;
+    case(ter_water):
+      return t->costs.water;
+      break;
+    case(ter_gate):
+      return t->costs.gate;
+      break;
+  }
+  return 0;
+}
+
+void trainer_init(trainer_t *trainer, trainer_type_t type){
+  trainer->type = type;
+  if (type == tr_hiker){
+    set_trainer_costs(trainer, 20, 20, 10, 50, 50, 15, 10, 15, 15, 20, 20);
+  }else{
+    set_trainer_costs(trainer, 20, 20, 10, 50, 50, 20, 10, 20, 20, 20, 20);
+  }
+}
+
+static int dijkstra_trainer(map_t *m, pair_t from, pair_t to, trainer_t *trainer){
   static path_t path[MAP_Y][MAP_X], *p;
   static uint32_t initialized = 0;
   heap_t h;
   uint32_t x, y;
+  int cost;
+  cost = 0;
 
-  if (!initialized) {
+ if (!initialized) {
     for (y = 0; y < MAP_Y; y++) {
       for (x = 0; x < MAP_X; x++) {
         path[y][x].pos[dim_y] = y;
@@ -992,26 +1089,33 @@ static void dijkstra_trainer(map_t *m, pair_t from, pair_t to)
     p->hn = NULL;
 
     if ((p->pos[dim_y] == to[dim_y]) && p->pos[dim_x] == to[dim_x]) {
+       
+       
       for (x = to[dim_x], y = to[dim_y];
            (x != from[dim_x]) || (y != from[dim_y]);
            p = &path[y][x], x = p->from[dim_x], y = p->from[dim_y]) {
-        // Don't overwrite the gate
-        if (x != to[dim_x] || y != to[dim_y]) {
-          mapxy(x, y) = ter_path;
-          heightxy(x, y) = 0;
-        }
+              if (x != to[dim_x]&& y != to[dim_y]){
+                // printf("cost += %d, \n", get_trainer_costs(trainer, m->map[y][x]));
+                // printf("cost = %d, \n", cost);
+                cost += get_trainer_costs(trainer, m->map[y][x]);
+              }
       }
+
+
+      //trainer->trainerMap[from[dim_y]][from[dim_x]] = cost;
+    
       heap_delete(&h);
-      return;
+
+      return cost;
+      //return;
     }
 
-    if ((path[p->pos[dim_y] - 1][p->pos[dim_x]    ].hn) &&
+
+  if ((path[p->pos[dim_y] - 1][p->pos[dim_x]    ].hn) &&
         (path[p->pos[dim_y] - 1][p->pos[dim_x]    ].cost >
-         ((p->cost + heightpair(p->pos)) *
-          edge_penalty(p->pos[dim_x], p->pos[dim_y] - 1)))) {
+         ((p->cost + get_trainer_costs(trainer, m->map[p->pos[dim_y] - 1][p->pos[dim_x]])) ))) {
       path[p->pos[dim_y] - 1][p->pos[dim_x]    ].cost =
-        ((p->cost + heightpair(p->pos)) *
-         edge_penalty(p->pos[dim_x], p->pos[dim_y] - 1));
+        ((p->cost + get_trainer_costs(trainer, m->map[p->pos[dim_y] - 1][p->pos[dim_x]])));
       path[p->pos[dim_y] - 1][p->pos[dim_x]    ].from[dim_y] = p->pos[dim_y];
       path[p->pos[dim_y] - 1][p->pos[dim_x]    ].from[dim_x] = p->pos[dim_x];
       heap_decrease_key_no_replace(&h, path[p->pos[dim_y] - 1]
@@ -1019,11 +1123,9 @@ static void dijkstra_trainer(map_t *m, pair_t from, pair_t to)
     }
     if ((path[p->pos[dim_y]    ][p->pos[dim_x] - 1].hn) &&
         (path[p->pos[dim_y]    ][p->pos[dim_x] - 1].cost >
-         ((p->cost + heightpair(p->pos)) *
-          edge_penalty(p->pos[dim_x] - 1, p->pos[dim_y])))) {
+         ((p->cost + get_trainer_costs(trainer, m->map[p->pos[dim_y]][p->pos[dim_x] - 1]))))) {
       path[p->pos[dim_y]][p->pos[dim_x] - 1].cost =
-        ((p->cost + heightpair(p->pos)) *
-         edge_penalty(p->pos[dim_x] - 1, p->pos[dim_y]));
+        ((p->cost + get_trainer_costs(trainer, m->map[p->pos[dim_y]][p->pos[dim_x] - 1])));
       path[p->pos[dim_y]    ][p->pos[dim_x] - 1].from[dim_y] = p->pos[dim_y];
       path[p->pos[dim_y]    ][p->pos[dim_x] - 1].from[dim_x] = p->pos[dim_x];
       heap_decrease_key_no_replace(&h, path[p->pos[dim_y]    ]
@@ -1031,11 +1133,9 @@ static void dijkstra_trainer(map_t *m, pair_t from, pair_t to)
     }
     if ((path[p->pos[dim_y]    ][p->pos[dim_x] + 1].hn) &&
         (path[p->pos[dim_y]    ][p->pos[dim_x] + 1].cost >
-         ((p->cost + heightpair(p->pos)) *
-          edge_penalty(p->pos[dim_x] + 1, p->pos[dim_y])))) {
+         ((p->cost + get_trainer_costs(trainer, m->map[p->pos[dim_y]][p->pos[dim_x] + 1]))))) {
       path[p->pos[dim_y]][p->pos[dim_x] + 1].cost =
-        ((p->cost + heightpair(p->pos)) *
-         edge_penalty(p->pos[dim_x] + 1, p->pos[dim_y]));
+        ((p->cost + get_trainer_costs(trainer, m->map[p->pos[dim_y]][p->pos[dim_x]+1])) );
       path[p->pos[dim_y]    ][p->pos[dim_x] + 1].from[dim_y] = p->pos[dim_y];
       path[p->pos[dim_y]    ][p->pos[dim_x] + 1].from[dim_x] = p->pos[dim_x];
       heap_decrease_key_no_replace(&h, path[p->pos[dim_y]    ]
@@ -1043,81 +1143,78 @@ static void dijkstra_trainer(map_t *m, pair_t from, pair_t to)
     }
     if ((path[p->pos[dim_y] + 1][p->pos[dim_x]    ].hn) &&
         (path[p->pos[dim_y] + 1][p->pos[dim_x]    ].cost >
-         ((p->cost + heightpair(p->pos)) *
-          edge_penalty(p->pos[dim_x], p->pos[dim_y] + 1)))) {
+         ((p->cost + get_trainer_costs(trainer, m->map[p->pos[dim_y] + 1][p->pos[dim_x]]))))) {
       path[p->pos[dim_y] + 1][p->pos[dim_x]    ].cost =
-        ((p->cost + heightpair(p->pos)) *
-         edge_penalty(p->pos[dim_x], p->pos[dim_y] + 1));
+        ((p->cost + get_trainer_costs(trainer, m->map[p->pos[dim_y] + 1][p->pos[dim_x]])));
       path[p->pos[dim_y] + 1][p->pos[dim_x]    ].from[dim_y] = p->pos[dim_y];
       path[p->pos[dim_y] + 1][p->pos[dim_x]    ].from[dim_x] = p->pos[dim_x];
       heap_decrease_key_no_replace(&h, path[p->pos[dim_y] + 1]
                                            [p->pos[dim_x]    ].hn);
     }
+
   }
+  return 0;
 }
+
+/*dijakstra notes:
+  -- source node is PC
+  -- all children should add degree of parent
+  -- called from every position in the map
+
+  dijkstra_trainer(map_t *m, trainer_t *t)
+    
+
 */
 
-typedef struct trainer_costs{
-  int8_t boulder;
-  int8_t tree;
-  int8_t path;
-  int8_t pMart;
-  int8_t pCntr;
-  int8_t tGrass;
-  int8_t sGrass;
-  int8_t mountain;
-  int8_t forest;
-  int8_t water;
-  int8_t gate;
-} trainer_costs_t;
-
-
-typedef enum trainer_type{
-  tr_hiker,
-  tr_rival
-}trainer_type_t;
-
-typedef struct trainer{
-
- trainer_type_t type;
- trainer_costs_t costs;
-
-}trainer_t;
-
-void set_trainer_costs(trainer_t *t, int8_t boulder,
-  int8_t tree, int8_t path, int8_t pMart, int8_t pCntr, int8_t tGrass,
-  int8_t sGrass, int8_t mountain, int8_t forest, int8_t water, int8_t gate){
-      
-      t->costs.boulder = boulder;
-      t->costs.tree = tree;
-      t->costs.path = path;
-      t->costs.pMart = pMart;
-      t->costs.pCntr = pCntr;
-      t->costs.tGrass = tGrass;
-      t->costs.sGrass = sGrass;
-      t->costs.mountain = mountain;
-      t->costs.forest = forest;
-      t->costs.water = water;
-      t->costs.gate = gate;
-}
-
-void trainer_init(trainer_t *trainer, trainer_type_t type){
-  trainer->type = type;
-  if (type == tr_hiker){
-    set_trainer_costs(trainer, -1, -1, 10, 50, 50, 15, 10, 15, 15, -1, -1);
-  }else{
-    set_trainer_costs(trainer, -1, -1, 10, 50, 50, 20, 10, -1, -1, -1, -1);
+void print_trainer_map(trainer_t *t, int trainerMap[MAP_Y][MAP_X] ){
+  for(int y = 1; y < MAP_Y - 1; y++){
+    for (int x = 1; x < MAP_X - 1; x++){
+      /*if (t->trainerMap[y][x]< 0){
+        printf("   ");
+      }else{*/
+      printf("%d ", trainerMap[y][x] );
+      //}
+    }
+    printf("\n");
   }
-
 }
 
-void calc_trainer_path(){
+void calc_trainer_path(map_t *m){
+  
   trainer_t hiker;
   trainer_init(&hiker, tr_hiker);
   trainer_t rival; 
   trainer_init(&rival, tr_rival);
+  int hikerMap[MAP_Y][MAP_X] = {0};
+  //int rivalMap[MAP_Y][MAP_X] = {0};
 
-  //printf("Hiker mountain cost: %d, Rival Tree cost: %d", hiker.costs.mountain, rival.costs.path);
+  
+  pair_t pcLoc;
+  pcLoc[dim_x] = m->pc.x;
+  pcLoc[dim_y] = m->pc.y;
+  for (int y = 1; y < MAP_Y-1; y++){
+    for (int x = 1; x < MAP_X-1; x++){
+      pair_t currLoc;
+      currLoc[dim_x] = x; 
+      currLoc[dim_y] = y; 
+      hikerMap[y][x] = dijkstra_trainer(m, currLoc, pcLoc, &hiker);
+    }
+  }
+/*
+  for (int y = 1; y < MAP_Y-1; y++){
+    for (int x = 1; x < MAP_X-1; x++){
+      pair_t currLoc;
+      currLoc[dim_x] = x; 
+      currLoc[dim_y] = y; 
+      rivalMap[y][x] = dijkstra_trainer(m, currLoc, pcLoc, &rival);
+    }
+  }
+  print_trainer_map(&rival, rivalMap);
+*/
+
+  print_trainer_map(&hiker, hikerMap);
+
+
 }
 
 int main(int argc, char *argv[])
@@ -1141,7 +1238,7 @@ int main(int argc, char *argv[])
 
   do {
     print_map();  
-    //calc_trainer_path();
+    calc_trainer_path(world.cur_map);
     printf("Current position is %d%cx%d%c (%d,%d).  "
            "Enter command: ",
            abs(world.cur_idx[dim_x] - (WORLD_SIZE / 2)),
